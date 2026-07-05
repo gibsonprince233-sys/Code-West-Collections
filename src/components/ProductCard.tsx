@@ -10,6 +10,7 @@ interface ProductCardProps {
   onDelete: (id: string) => void | Promise<void>;
   onAddToBag: (product: Product) => void | Promise<void>;
   onViewDetails: (product: Product) => void | Promise<void>;
+  isLinked?: boolean;
 }
 
 export default function ProductCard({
@@ -18,7 +19,8 @@ export default function ProductCard({
   onEdit,
   onDelete,
   onAddToBag,
-  onViewDetails
+  onViewDetails,
+  isLinked = false
 }: ProductCardProps) {
   const [copied, setCopied] = useState(false);
   const isAvailable = product.status === 'available';
@@ -49,10 +51,19 @@ export default function ProductCard({
 
   return (
     <div 
-      className="group relative flex flex-col border border-neutral-200 bg-white"
+      className={`group relative flex flex-col border bg-white transition-all duration-300 ${
+        isLinked 
+          ? 'border-black ring-1 ring-black shadow-md md:scale-[1.02]' 
+          : 'border-neutral-200 hover:shadow-xs'
+      }`}
     >
       {/* Category & Status Overlay Badges */}
       <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
+        {isLinked && (
+          <span className="bg-emerald-600 text-white font-mono text-[9px] uppercase tracking-[0.15em] px-2.5 py-1 font-bold flex items-center gap-1 shadow-xs animate-pulse">
+            ★ Shared Choice
+          </span>
+        )}
         <span className="bg-black/90 backdrop-blur-xs text-white font-mono text-[9px] uppercase tracking-[0.15em] px-2.5 py-1 font-semibold">
           {product.category}
         </span>

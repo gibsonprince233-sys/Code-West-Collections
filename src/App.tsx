@@ -36,6 +36,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
+  const [linkedProductId, setLinkedProductId] = useState<string | null>(null);
 
   // Admin and Overlay controllers
   const [isAdmin, setIsAdmin] = useState(false);
@@ -136,6 +137,7 @@ export default function App() {
       const urlParams = new URLSearchParams(window.location.search);
       const productId = urlParams.get('product') || urlParams.get('p');
       if (productId) {
+        setLinkedProductId(productId);
         const matchedProduct = dbProducts.find(p => p.id === productId);
         if (matchedProduct) {
           setSelectedProduct(matchedProduct);
@@ -209,11 +211,27 @@ export default function App() {
   });
 
   // Sort pipeline
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === 'price-asc') return a.price - b.price;
-    if (sortBy === 'price-desc') return b.price - a.price;
-    return b.createdAt - a.createdAt; // newest
-  });
+  const sortedProducts = (() => {
+    let sorted = [...filteredProducts].sort((a, b) => {
+      if (sortBy === 'price-asc') return a.price - b.price;
+      if (sortBy === 'price-desc') return b.price - a.price;
+      return b.createdAt - a.createdAt; // newest
+    });
+
+    if (linkedProductId) {
+      const idx = sorted.findIndex(p => p.id === linkedProductId);
+      if (idx > -1) {
+        const [linkedItem] = sorted.splice(idx, 1);
+        return [linkedItem, ...sorted];
+      } else {
+        const matchedInMaster = products.find(p => p.id === linkedProductId);
+        if (matchedInMaster) {
+          return [matchedInMaster, ...sorted];
+        }
+      }
+    }
+    return sorted;
+  })();
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col font-sans selection:bg-black selection:text-white">
@@ -297,7 +315,7 @@ export default function App() {
               We couldn't locate any products in the catalog fitting your search. Try resetting filters or search criteria.
             </p>
             <button
-              onClick={() => { setSelectedCategory('All'); setSearchQuery(''); }}
+              onClick={() => { setSelectedCategory('All'); setSearchQuery(''); setLinkedProductId(null); }}
               className="mt-6 border border-black bg-white px-4 py-2 font-mono text-xs uppercase tracking-wider text-black hover:bg-black hover:text-white transition-all cursor-pointer"
             >
               Reset Search Parameters
@@ -311,6 +329,7 @@ export default function App() {
                 key={product.id}
                 product={product}
                 isAdmin={isAdmin}
+                isLinked={product.id === linkedProductId}
                 onEdit={() => {
                   setIsAdminPanelOpen(true);
                   // Load directly into editing form
