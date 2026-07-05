@@ -37,7 +37,7 @@ export default function HeroSection({
             </div>
             
             <div className="space-y-4">
-              <h1 className="font-serif text-5xl font-extralight tracking-tight sm:text-7xl leading-[1.05]">
+              <h1 className="hero-title font-serif text-5xl font-extralight tracking-tight sm:text-7xl leading-[1.05]">
                 DEFINING<br />
                 <span className="font-semibold italic text-neutral-100">
                   MODERN COMFORT

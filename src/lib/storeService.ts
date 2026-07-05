@@ -11,7 +11,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Product, StoreSettings } from '../types';
+import { Product, StoreSettings, ContactMessage } from '../types';
 
 // Curated high-quality clothing product images from Unsplash (royalty-free, reliable URLs)
 const DEFAULT_PRODUCTS: Omit<Product, 'id'>[] = [
@@ -199,4 +199,51 @@ export function buildOrderUrl(product: Product, settings: StoreSettings): string
     .replace(/{id}/g, product.id);
 
   return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+}
+
+// --- CONTACT MESSAGES OPERATIONS ---
+export async function submitContactMessage(msg: Omit<ContactMessage, 'id' | 'createdAt' | 'status'>): Promise<string> {
+  const messagesRef = collection(db, "contact_messages");
+  const docRef = await addDoc(messagesRef, cleanData({
+    ...msg,
+    status: 'unread',
+    createdAt: Date.now()
+  }));
+  return docRef.id;
+}
+
+export async function getContactMessages(): Promise<ContactMessage[]> {
+  try {
+    const messagesRef = collection(db, "contact_messages");
+    const q = query(messagesRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+    
+    const messages: ContactMessage[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      messages.push({
+        id: doc.id,
+        name: data.name || '',
+        email: data.email || '',
+        subject: data.subject || '',
+        message: data.message || '',
+        createdAt: data.createdAt || Date.now(),
+        status: data.status || 'unread'
+      });
+    });
+    return messages;
+  } catch (error) {
+    console.error("Error fetching contact messages:", error);
+    return [];
+  }
+}
+
+export async function updateContactMessageStatus(id: string, status: 'unread' | 'read' | 'archived'): Promise<void> {
+  const docRef = doc(db, "contact_messages", id);
+  await updateDoc(docRef, cleanData({ status }));
+}
+
+export async function deleteContactMessage(id: string): Promise<void> {
+  const docRef = doc(db, "contact_messages", id);
+  await deleteDoc(docRef);
 }

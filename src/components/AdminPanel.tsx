@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Save, Edit3, Trash2, X, Settings, Image as ImageIcon, 
-  Upload, HelpCircle, RefreshCw, Key, Check, Phone, FileText, LayoutList, Link
+  Upload, HelpCircle, RefreshCw, Key, Check, Phone, FileText, LayoutList, Link,
+  MessageSquare, Mail, Archive, CheckCircle
 } from 'lucide-react';
-import { Product, StoreSettings } from '../types';
-import { addProduct, updateProduct, deleteProduct, updateStoreSettings } from '../lib/storeService';
+import { Product, StoreSettings, ContactMessage } from '../types';
+import { 
+  addProduct, updateProduct, deleteProduct, updateStoreSettings,
+  getContactMessages, updateContactMessageStatus, deleteContactMessage
+} from '../lib/storeService';
 
 interface AdminPanelProps {
   products: Product[];
@@ -21,8 +25,12 @@ export default function AdminPanel({
   onClose,
   onUpdateSettings
 }: AdminPanelProps) {
-  // Tabs: 'products' | 'settings'
-  const [activeTab, setActiveTab] = useState<'products' | 'settings'>('products');
+  // Tabs: 'products' | 'settings' | 'inquiries'
+  const [activeTab, setActiveTab] = useState<'products' | 'settings' | 'inquiries'>('products');
+  
+  // Contact Messages State
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   
   // Product Form State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -47,6 +55,44 @@ export default function AdminPanel({
   const [isSettingsSaving, setIsSettingsSaving] = useState(false);
   const [showPasscode, setShowPasscode] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const fetchMessages = async () => {
+    setIsLoadingMessages(true);
+    try {
+      const fetched = await getContactMessages();
+      setMessages(fetched);
+    } catch (err) {
+      console.error("Error loading messages:", err);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  const handleUpdateMessageStatus = async (id: string, status: 'unread' | 'read' | 'archived') => {
+    try {
+      await updateContactMessageStatus(id, status);
+      setMessages(prev => prev.map(m => m.id === id ? { ...m, status } : m));
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Failed to update message status");
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (window.confirm("Delete this inquiry ticket permanently?")) {
+      try {
+        await deleteContactMessage(id);
+        setMessages(prev => prev.filter(m => m.id !== id));
+      } catch (err) {
+        console.error("Error deleting message:", err);
+        alert("Failed to delete message");
+      }
+    }
+  };
 
   const handleCopySocialLink = (productId: string) => {
     try {
@@ -296,6 +342,23 @@ export default function AdminPanel({
           >
             <Settings className="h-4 w-4" />
             Global Settings
+          </button>
+
+          <button
+            onClick={() => setActiveTab('inquiries')}
+            className={`flex items-center gap-2 px-4 py-3 font-mono text-xs uppercase tracking-wider transition-all border-b-2 ${
+              activeTab === 'inquiries'
+                ? 'border-black text-black font-semibold'
+                : 'border-transparent text-neutral-500 hover:text-black'
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Inquiries
+            {messages.filter(m => m.status === 'unread').length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[9px] font-mono font-bold bg-rose-500 text-white leading-none">
+                {messages.filter(m => m.status === 'unread').length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -723,6 +786,170 @@ export default function AdminPanel({
                 )}
               </button>
             </form>
+          )}
+
+          {activeTab === 'inquiries' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
+                <div>
+                  <h3 className="font-display text-xs font-bold tracking-wider uppercase text-neutral-800">
+                    Customer Inquiry Tickets
+                  </h3>
+                  <p className="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mt-0.5">
+                    View and attend to secure contact form inquiries
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchMessages}
+                  disabled={isLoadingMessages}
+                  className="flex items-center gap-1 px-2.5 py-1.5 border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 hover:text-black transition-colors font-mono text-[9px] uppercase tracking-wider cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3 w-3 ${isLoadingMessages ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              {isLoadingMessages && messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 space-y-3">
+                  <RefreshCw className="h-6 w-6 animate-spin text-neutral-400" />
+                  <p className="font-mono text-[10px] text-neutral-400 uppercase tracking-widest">
+                    Polling Firestore...
+                  </p>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="border border-neutral-200 bg-neutral-50/50 p-12 text-center space-y-3">
+                  <Mail className="h-8 w-8 text-neutral-300 mx-auto" />
+                  <div className="space-y-1">
+                    <p className="font-display text-xs font-bold text-neutral-700 uppercase tracking-wider">
+                      Inbox Empty
+                    </p>
+                    <p className="text-xs text-neutral-400 font-light max-w-sm mx-auto leading-relaxed">
+                      No customer inquiries have been registered yet. Once submitted via the Contact form, tickets populate here in real-time.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 animate-fade-in">
+                  {messages.map((msg) => {
+                    const mailtoUrl = `mailto:${msg.email}?subject=${encodeURIComponent(`Re: ${msg.subject} - Code West Collections`)}&body=${encodeURIComponent(`Hi ${msg.name},\n\nThank you for reaching out to Code West Collections regarding "${msg.subject}".\n\n[Your Reply Here]\n\nWarm regards,\nCode West Team\n${settings.whatsappNumber}`)}`;
+                    
+                    return (
+                      <div 
+                        key={msg.id} 
+                        className={`border transition-all duration-300 p-5 bg-white ${
+                          msg.status === 'unread' 
+                            ? 'border-brand-accent shadow-sm animate-pulse-subtle' 
+                            : msg.status === 'archived'
+                            ? 'border-neutral-200 opacity-60'
+                            : 'border-neutral-200'
+                        }`}
+                      >
+                        {/* Ticket Header */}
+                        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-100 pb-3 mb-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-display text-xs font-bold text-neutral-900 uppercase">
+                                {msg.subject}
+                              </span>
+                              <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider ${
+                                msg.status === 'unread' 
+                                  ? 'bg-brand-accent text-white' 
+                                  : msg.status === 'archived'
+                                  ? 'bg-neutral-200 text-neutral-600'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                {msg.status}
+                              </span>
+                            </div>
+                            <div className="font-mono text-[10px] text-neutral-500">
+                              From: <span className="text-neutral-800 font-medium">{msg.name}</span> (<a href={`mailto:${msg.email}`} className="underline hover:text-brand-accent">{msg.email}</a>)
+                            </div>
+                          </div>
+                          
+                          <div className="font-mono text-[9px] text-neutral-400 text-right">
+                            {new Date(msg.createdAt).toLocaleString(undefined, { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Ticket Message Body */}
+                        <div className="text-xs text-neutral-700 font-light leading-relaxed whitespace-pre-wrap bg-neutral-50 p-3.5 border border-neutral-100 mb-4 font-mono select-text">
+                          {msg.message}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-3">
+                          <div className="flex items-center gap-2">
+                            {msg.status === 'unread' && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateMessageStatus(msg.id!, 'read')}
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-mono text-[9px] uppercase tracking-wider cursor-pointer"
+                              >
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Mark as Attended</span>
+                              </button>
+                            )}
+                            
+                            {msg.status === 'read' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateMessageStatus(msg.id!, 'unread')}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 hover:text-black transition-colors font-mono text-[9px] uppercase tracking-wider cursor-pointer"
+                                >
+                                  <span>Mark Unread</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateMessageStatus(msg.id!, 'archived')}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 border border-neutral-200 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-black transition-colors font-mono text-[9px] uppercase tracking-wider cursor-pointer"
+                                >
+                                  <Archive className="h-3 w-3 text-neutral-400" />
+                                  <span>Archive</span>
+                                </button>
+                              </>
+                            )}
+
+                            {msg.status === 'archived' && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateMessageStatus(msg.id!, 'read')}
+                                className="flex items-center gap-1 px-2.5 py-1.5 border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-600 hover:text-black transition-colors font-mono text-[9px] uppercase tracking-wider cursor-pointer"
+                              >
+                                <span>Restore Ticket</span>
+                              </button>
+                            )}
+
+                            <a
+                              href={mailtoUrl}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-brand-accent text-white hover:bg-black transition-colors font-mono text-[9px] uppercase tracking-widest font-bold cursor-pointer"
+                            >
+                              <Mail className="h-3 w-3" />
+                              <span>Reply via Email</span>
+                            </a>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMessage(msg.id!)}
+                            className="p-1.5 border border-neutral-200 text-neutral-400 hover:text-rose-600 hover:border-rose-300 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Delete inquiry permanently"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
         </div>

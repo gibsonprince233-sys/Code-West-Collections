@@ -23,3 +23,13 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface ContactMessage {
+  id?: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAt: number;
+  status: 'unread' | 'read' | 'archived';
+}
+

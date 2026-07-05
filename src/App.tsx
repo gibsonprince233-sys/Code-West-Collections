@@ -11,6 +11,9 @@ import AdminPanel from './components/AdminPanel';
 import CartDrawer from './components/CartDrawer';
 import OrderStatusModal from './components/OrderStatusModal';
 import LegalModals from './components/LegalModals';
+import AboutPage from './components/AboutPage';
+import ContactPage from './components/ContactPage';
+import PrivacyPage from './components/PrivacyPage';
 import { 
   Lock, ArrowRight, X, AlertTriangle, Filter, Eye, ShoppingBag, CheckCircle, Smartphone
 } from 'lucide-react';
@@ -37,6 +40,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'price-asc' | 'price-desc'>('newest');
   const [linkedProductId, setLinkedProductId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'shop' | 'about' | 'contact' | 'privacy'>('shop');
 
   // Admin and Overlay controllers
   const [isAdmin, setIsAdmin] = useState(false);
@@ -269,105 +273,134 @@ export default function App() {
         }}
         onLogout={handleLogout}
         searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
+        setSearchQuery={(query) => {
+          setSearchQuery(query);
+          if (query.trim() !== '') {
+            setActiveTab('shop');
+          }
+        }}
         instagramUrl={settings.instagramUrl}
         tiktokUrl={settings.tiktokUrl}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         onTrackOrderClick={() => setIsTrackOrderOpen(true)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
 
-      {/* Hero Header & Filters tab */}
-      <HeroSection
-        categories={availableCategories}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-        productCount={products.length}
-      />
+      {activeTab === 'shop' && (
+        <>
+          {/* Hero Header & Filters tab */}
+          <HeroSection
+            categories={availableCategories}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            productCount={products.length}
+          />
 
-      {/* Main Catalog View Grid */}
-      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 flex-1">
-        
-        {/* Sort & Quick Results Statistics bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5 mb-8">
-          <div>
-            <h2 className="font-display text-lg font-bold text-neutral-900 uppercase">
-              {selectedCategory} Drop
-            </h2>
-            <p className="font-mono text-[10px] uppercase text-neutral-500 tracking-wider mt-1">
-              Showing {sortedProducts.length} of {products.length} design items
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xs text-neutral-400 uppercase">Sort order:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="rounded-none border border-neutral-200 bg-white py-1.5 px-3 font-mono text-xs uppercase text-neutral-800 outline-none focus:border-black"
-            >
-              <option value="newest">Latest Releases</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Loading Skeletons */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="space-y-4 border border-neutral-200 bg-white p-4 animate-pulse">
-                <div className="aspect-square w-full bg-neutral-200" />
-                <div className="h-4 bg-neutral-200 w-3/4" />
-                <div className="h-3 bg-neutral-200 w-1/2" />
-                <div className="h-8 bg-neutral-200 w-full" />
+          {/* Main Catalog View Grid */}
+          <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 flex-1">
+            
+            {/* Sort & Quick Results Statistics bar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5 mb-8">
+              <div>
+                <h2 className="font-display text-lg font-bold text-neutral-900 uppercase">
+                  {selectedCategory} Drop
+                </h2>
+                <p className="font-mono text-[10px] uppercase text-neutral-500 tracking-wider mt-1">
+                  Showing {sortedProducts.length} of {products.length} design items
+                </p>
               </div>
-            ))}
-          </div>
-        ) : sortedProducts.length === 0 ? (
-          /* Empty Search or Category Results State */
-          <div className="text-center py-24 border border-dashed border-neutral-300 bg-white/50">
-            <ShoppingBag className="mx-auto h-12 w-12 text-neutral-300" />
-            <h3 className="mt-4 font-display text-sm font-bold uppercase text-neutral-900">
-              No matching drops found
-            </h3>
-            <p className="mt-2 text-xs text-neutral-500 font-light max-w-sm mx-auto leading-relaxed">
-              We couldn't locate any products in the catalog fitting your search. Try resetting filters or search criteria.
-            </p>
-            <button
-              onClick={() => { setSelectedCategory('All'); setSearchQuery(''); setLinkedProductId(null); }}
-              className="mt-6 border border-black bg-white px-4 py-2 font-mono text-xs uppercase tracking-wider text-black hover:bg-black hover:text-white transition-all cursor-pointer"
-            >
-              Reset Search Parameters
-            </button>
-          </div>
-        ) : (
-          /* Product Cards Render Grid */
-          <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
-            {sortedProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                isAdmin={isAdmin}
-                isLinked={product.id === linkedProductId}
-                onEdit={() => {
-                  setIsAdminPanelOpen(true);
-                  // Load directly into editing form
-                }}
-                onDelete={async (id) => {
-                  if (window.confirm("Are you sure?")) {
-                    // Let the service handle deletion directly
-                    await fetchStoreData();
-                  }
-                }}
-                onAddToBag={handleAddToBag}
-                onViewDetails={setSelectedProduct}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs text-neutral-400 uppercase">Sort order:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="rounded-none border border-neutral-200 bg-white py-1.5 px-3 font-mono text-xs uppercase text-neutral-800 outline-none focus:border-black"
+                >
+                  <option value="newest">Latest Releases</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Loading Skeletons */}
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className="space-y-4 border border-neutral-200 bg-white p-4 animate-pulse">
+                    <div className="aspect-square w-full bg-neutral-200" />
+                    <div className="h-4 bg-neutral-200 w-3/4" />
+                    <div className="h-3 bg-neutral-200 w-1/2" />
+                    <div className="h-8 bg-neutral-200 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : sortedProducts.length === 0 ? (
+              /* Empty Search or Category Results State */
+              <div className="text-center py-24 border border-dashed border-neutral-300 bg-white/50">
+                <ShoppingBag className="mx-auto h-12 w-12 text-neutral-300" />
+                <h3 className="mt-4 font-display text-sm font-bold uppercase text-neutral-900">
+                  No matching drops found
+                </h3>
+                <p className="mt-2 text-xs text-neutral-500 font-light max-w-sm mx-auto leading-relaxed">
+                  We couldn't locate any products in the catalog fitting your search. Try resetting filters or search criteria.
+                </p>
+                <button
+                  onClick={() => { setSelectedCategory('All'); setSearchQuery(''); setLinkedProductId(null); }}
+                  className="mt-6 border border-black bg-white px-4 py-2 font-mono text-xs uppercase tracking-wider text-black hover:bg-black hover:text-white transition-all cursor-pointer"
+                >
+                  Reset Search Parameters
+                </button>
+              </div>
+            ) : (
+              /* Product Cards Render Grid */
+              <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
+                {sortedProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isAdmin={isAdmin}
+                    isLinked={product.id === linkedProductId}
+                    onEdit={() => {
+                      setIsAdminPanelOpen(true);
+                      // Load directly into editing form
+                    }}
+                    onDelete={async (id) => {
+                      if (window.confirm("Are you sure?")) {
+                        // Let the service handle deletion directly
+                        await fetchStoreData();
+                      }
+                    }}
+                    onAddToBag={handleAddToBag}
+                    onViewDetails={setSelectedProduct}
+                  />
+                ))}
+              </div>
+            )}
+          </main>
+        </>
+      )}
+
+      {activeTab === 'about' && (
+        <div className="flex-1">
+          <AboutPage onBackToShop={() => setActiveTab('shop')} />
+        </div>
+      )}
+
+      {activeTab === 'contact' && (
+        <div className="flex-1">
+          <ContactPage settings={settings} onBackToShop={() => setActiveTab('shop')} />
+        </div>
+      )}
+
+      {activeTab === 'privacy' && (
+        <div className="flex-1">
+          <PrivacyPage />
+        </div>
+      )}
 
       {/* Elegant Brutalist Brand Footer */}
       <footer className="bg-black text-white border-t border-neutral-900 mt-24">
@@ -384,12 +417,76 @@ export default function App() {
               </p>
             </div>
 
-            {/* Center: Social loop links */}
+            {/* Center: Social loop links & navigation */}
             <div>
               <h4 className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-4">
-                Operational Channels
+                Store Navigation
               </h4>
               <ul className="space-y-2 text-xs font-light text-neutral-400">
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveTab('shop');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    Browse Catalog Drop
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveTab('about');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    Our Story [ About Us ]
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveTab('contact');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    Contact Loop [ Support ]
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      setActiveTab('privacy');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    Privacy & Compliance
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      if (isAdmin) setIsAdminPanelOpen(true);
+                      else setIsPasscodeModalOpen(true);
+                    }}
+                    className="hover:text-white transition-colors text-left cursor-pointer font-semibold"
+                  >
+                    Inventory Admin Portal
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Right: Contact Template Redirection details */}
+            <div>
+              <h4 className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-4">
+                Social & Direct Channels
+              </h4>
+              <ul className="space-y-2 text-xs font-light text-neutral-400 mb-4">
                 {settings.instagramUrl && (
                   <li>
                     <a href={settings.instagramUrl} target="_blank" referrerPolicy="no-referrer" rel="noopener noreferrer" className="hover:text-white transition-colors">
@@ -404,25 +501,7 @@ export default function App() {
                     </a>
                   </li>
                 )}
-                <li>
-                  <button 
-                    onClick={() => {
-                      if (isAdmin) setIsAdminPanelOpen(true);
-                      else setIsPasscodeModalOpen(true);
-                    }}
-                    className="hover:text-white transition-colors text-left"
-                  >
-                    Inventory Admin Portal
-                  </button>
-                </li>
               </ul>
-            </div>
-
-            {/* Right: Contact Template Redirection details */}
-            <div>
-              <h4 className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mb-4">
-                Order Delivery Loop
-              </h4>
               <p className="text-xs text-neutral-500 font-light leading-relaxed">
                 Transactions route instantly to WhatsApp at <span className="text-neutral-300 font-mono text-[11px] font-medium">{settings.whatsappNumber}</span>. All payments and drops are settled securely in conversation with the creators.
               </p>
@@ -434,7 +513,10 @@ export default function App() {
             <span>© 2026 Code West Collections. All Rights Reserved.</span>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setActiveLegalModal('privacy')}
+                onClick={() => {
+                  setActiveTab('privacy');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
                 className="hover:text-white transition-colors cursor-pointer"
               >
                 Privacy Policy
