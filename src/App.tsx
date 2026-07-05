@@ -88,6 +88,25 @@ export default function App() {
     }
   }, [selectedProduct]);
 
+  // Scroll to deep-linked product once loading is complete
+  useEffect(() => {
+    if (!isLoading && linkedProductId) {
+      const scrollTimer = setTimeout(() => {
+        const cardEl = document.getElementById(`product-card-${linkedProductId}`);
+        if (cardEl) {
+          cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          const mainCatalog = document.querySelector('main');
+          if (mainCatalog) {
+            mainCatalog.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }, 500);
+
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [isLoading, linkedProductId]);
+
   const saveCartToLocalStorage = (newCart: CartItem[]) => {
     setCart(newCart);
     localStorage.setItem('cw_shopping_bag', JSON.stringify(newCart));
@@ -138,6 +157,8 @@ export default function App() {
       const productId = urlParams.get('product') || urlParams.get('p');
       if (productId) {
         setLinkedProductId(productId);
+        setSelectedCategory('All');
+        setSearchQuery('');
         const matchedProduct = dbProducts.find(p => p.id === productId);
         if (matchedProduct) {
           setSelectedProduct(matchedProduct);

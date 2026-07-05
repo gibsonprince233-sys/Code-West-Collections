@@ -51,6 +51,7 @@ export default function ProductCard({
 
   return (
     <div 
+      id={`product-card-${product.id}`}
       className={`group relative flex flex-col border bg-white transition-all duration-300 ${
         isLinked 
           ? 'border-black ring-1 ring-black shadow-md md:scale-[1.02]' 
