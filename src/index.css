@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  /* Overriding standard black and neutral scales to transform the entire layout to luxurious editorial Green & White */
+  --color-black: #062314;
+  --color-neutral-950: #04180d;
+  --color-neutral-900: #062314;
+  --color-neutral-800: #0b3d23;
+  --color-neutral-700: #125432;
+  --color-neutral-600: #1a6d42;
+  --color-neutral-500: #298c58;
+  --color-neutral-400: #55b784;
+  --color-neutral-300: #93dbb3;
+  --color-neutral-200: #c9ebd8;
+  --color-neutral-100: #e8f7ee;
+  --color-neutral-50: #f4fbf7;
+  
+  --color-brand-accent: #16a34a;
+}
+
+/* Custom subtle scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(22, 163, 74, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(22, 163, 74, 0.45);
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(232, 247, 238, 0.2);
+}
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(232, 247, 238, 0.45);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #ffffff;
+  color: #062314;
+  overflow-x: hidden;
+}
+
+/* Hide any potential Google AI Studio platform watermarks, banners, badges, or feedback buttons */
+[class*="aistudio"], [id*="aistudio"], [class*="ai-studio"], [id*="ai-studio"], [class*="gemini"], [id*="gemini"], [class*="watermark"], [id*="watermark"], [class*="badge"], [id*="badge"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A collections item in the store",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "The name of the clothing item" },
+        "price": { "type": "number", "description": "Price in USD" },
+        "description": { "type": "string", "description": "Descriptions and product details" },
+        "imageUrl": { "type": "string", "description": "Base64 data URL string or external photo URL" },
+        "category": { "type": "string", "description": "Category for filtering like Outerwear, Tops, Bottoms, Accessories" },
+        "orderLink": { "type": "string", "description": "Optional direct checkout link overriding default WhatsApp checkout" },
+        "status": { "type": "string", "enum": ["available", "out_of_stock"], "description": "Inventory status" },
+        "createdAt": { "type": "number", "description": "Epoch timestamp of enrollment" }
+      },
+      "required": ["name", "price", "imageUrl", "category", "status", "createdAt"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Global boutique details and operational parameters",
+      "type": "object",
+      "properties": {
+        "adminPasscode": { "type": "string", "description": "Admin console passcode" },
+        "whatsappNumber": { "type": "string", "description": "WhatsApp contact in full country code format" },
+        "whatsappTemplate": { "type": "string", "description": "Custom order template" },
+        "instagramUrl": { "type": "string" },
+        "tiktokUrl": { "type": "string" }
+      },
+      "required": ["adminPasscode", "whatsappNumber", "whatsappTemplate"]
+    }
+  },
+  "firestore": {
+    "products/{productId}": {
+      "schema": "Product",
+      "description": "Clothing collections catalog"
+    },
+    "settings/global": {
+      "schema": "StoreSettings",
+      "description": "Global configurations"
+    }
+  }
+}
