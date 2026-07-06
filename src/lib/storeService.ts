@@ -127,6 +127,16 @@ export async function getProducts(): Promise<Product[]> {
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
+      // Check if we have already seeded before, preventing re-seeding after deliberate deletion of all items
+      const settingsRef = doc(db, "settings", "global");
+      const settingsSnap = await getDoc(settingsRef);
+      const alreadySeeded = settingsSnap.exists() && settingsSnap.data()?.hasSeeded === true;
+
+      if (alreadySeeded) {
+        console.log("Database has already been seeded and was deliberately emptied. Keeping it empty.");
+        return [];
+      }
+
       // Seed default products so the boutique has premium content on first load!
       console.log("No products found, seeding default collections...");
       const seeded: Product[] = [];
@@ -134,6 +144,13 @@ export async function getProducts(): Promise<Product[]> {
         const docRef = await addDoc(productsRef, p);
         seeded.push({ id: docRef.id, ...p });
       }
+
+      try {
+        await setDoc(settingsRef, { hasSeeded: true }, { merge: true });
+      } catch (err) {
+        console.error("Failed to write seeded status in settings doc:", err);
+      }
+
       return seeded;
     }
     
@@ -166,6 +183,14 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<string> 
     ...product,
     createdAt: Date.now()
   }));
+
+  try {
+    const settingsRef = doc(db, "settings", "global");
+    await setDoc(settingsRef, { hasSeeded: true }, { merge: true });
+  } catch (err) {
+    console.error("Failed to write seeded status in settings doc:", err);
+  }
+
   return docRef.id;
 }
 

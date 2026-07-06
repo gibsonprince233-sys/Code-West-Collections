@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  getProducts, getStoreSettings, buildOrderUrl 
+  getProducts, getStoreSettings, buildOrderUrl, deleteProduct 
 } from './lib/storeService';
 import { Product, StoreSettings, CartItem } from './types';
 import Navbar from './components/Navbar';
@@ -14,6 +14,7 @@ import LegalModals from './components/LegalModals';
 import AboutPage from './components/AboutPage';
 import ContactPage from './components/ContactPage';
 import PrivacyPage from './components/PrivacyPage';
+import ConfirmModal from './components/ConfirmModal';
 import { 
   Lock, ArrowRight, X, AlertTriangle, Filter, Eye, ShoppingBag, CheckCircle, Smartphone
 } from 'lucide-react';
@@ -55,6 +56,14 @@ export default function App() {
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
 
   // Load Data on Mount
   useEffect(() => {
@@ -368,11 +377,22 @@ export default function App() {
                       setIsAdminPanelOpen(true);
                       // Load directly into editing form
                     }}
-                    onDelete={async (id) => {
-                      if (window.confirm("Are you sure?")) {
-                        // Let the service handle deletion directly
-                        await fetchStoreData();
-                      }
+                    onDelete={(id) => {
+                      setConfirmModal({
+                        isOpen: true,
+                        title: "Confirm Product Deletion",
+                        message: "Are you absolutely sure you want to delete this product? This action cannot be undone and will permanently remove it from the catalog.",
+                        onConfirm: async () => {
+                          try {
+                            await deleteProduct(id);
+                            await fetchStoreData();
+                            alert("Product deleted!");
+                          } catch (err) {
+                            console.error("Delete failed:", err);
+                            alert("Failed to delete product. Please check your network or Firebase rules.");
+                          }
+                        }
+                      });
                     }}
                     onAddToBag={handleAddToBag}
                     onViewDetails={setSelectedProduct}
@@ -648,6 +668,20 @@ export default function App() {
         type={activeLegalModal || 'privacy'}
         onClose={() => setActiveLegalModal(null)}
       />
+
+      {/* 5. Custom confirmation Dialog */}
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmText="Yes, Delete Permanently"
+          cancelText="Cancel"
+          isDestructive={true}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
 
     </div>
   );

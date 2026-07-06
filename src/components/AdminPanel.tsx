@@ -9,6 +9,7 @@ import {
   addProduct, updateProduct, deleteProduct, updateStoreSettings,
   getContactMessages, updateContactMessageStatus, deleteContactMessage
 } from '../lib/storeService';
+import ConfirmModal from './ConfirmModal';
 
 interface AdminPanelProps {
   products: Product[];
@@ -56,6 +57,14 @@ export default function AdminPanel({
   const [showPasscode, setShowPasscode] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
+
   const fetchMessages = async () => {
     setIsLoadingMessages(true);
     try {
@@ -82,16 +91,21 @@ export default function AdminPanel({
     }
   };
 
-  const handleDeleteMessage = async (id: string) => {
-    if (window.confirm("Delete this inquiry ticket permanently?")) {
-      try {
-        await deleteContactMessage(id);
-        setMessages(prev => prev.filter(m => m.id !== id));
-      } catch (err) {
-        console.error("Error deleting message:", err);
-        alert("Failed to delete message");
+  const handleDeleteMessage = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Inquiry Ticket",
+      message: "Are you sure you want to permanently delete this customer inquiry ticket? This operation cannot be undone.",
+      onConfirm: async () => {
+        try {
+          await deleteContactMessage(id);
+          setMessages(prev => prev.filter(m => m.id !== id));
+        } catch (err) {
+          console.error("Error deleting message:", err);
+          alert("Failed to delete message");
+        }
       }
-    }
+    });
   };
 
   const handleCopySocialLink = (productId: string) => {
@@ -238,20 +252,25 @@ export default function AdminPanel({
   };
 
   // Handle Product Delete
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you absolutely sure you want to delete this product? This action cannot be undone.")) {
-      try {
-        await deleteProduct(id);
-        onRefresh();
-        if (editingProduct?.id === id) {
-          resetProductForm();
+  const handleDelete = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Confirm Product Deletion",
+      message: "Are you absolutely sure you want to delete this product? This action cannot be undone and will permanently remove it from the catalog.",
+      onConfirm: async () => {
+        try {
+          await deleteProduct(id);
+          onRefresh();
+          if (editingProduct?.id === id) {
+            resetProductForm();
+          }
+          alert("Product deleted!");
+        } catch (err) {
+          console.error(err);
+          alert("Delete failed.");
         }
-        alert("Product deleted!");
-      } catch (err) {
-        console.error(err);
-        alert("Delete failed.");
       }
-    }
+    });
   };
 
   // Handle Settings Submit
@@ -955,6 +974,20 @@ export default function AdminPanel({
         </div>
 
       </div>
+
+      {confirmModal && (
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmText="Yes, Delete Permanently"
+          cancelText="Cancel"
+          isDestructive={true}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
+
     </div>
   );
 }
