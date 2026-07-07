@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Save, Edit3, Trash2, X, Settings, Image as ImageIcon, 
   Upload, HelpCircle, RefreshCw, Key, Check, Phone, FileText, LayoutList, Link,
-  MessageSquare, Mail, Archive, CheckCircle
+  MessageSquare, Mail, Archive, CheckCircle, Eye, MousePointerClick
 } from 'lucide-react';
 import { Product, StoreSettings, ContactMessage } from '../types';
 import { 
@@ -213,8 +213,8 @@ export default function AdminPanel({
   // Handle Product Form Submit
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formPrice || !formImageUrl) {
-      alert("Please supply Name, Price, and an Image.");
+    if (!formName.trim() || !formImageUrl) {
+      alert("Please supply Name and an Image.");
       return;
     }
 
@@ -384,6 +384,47 @@ export default function AdminPanel({
         {/* Core Scrollable Panel Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
+          {/* Real-time Website KPI Metrics */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Website Visits Card */}
+            <div className="border border-neutral-200 bg-neutral-50/50 p-4 relative overflow-hidden flex flex-col justify-between h-24">
+              <div className="flex justify-between items-start">
+                <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-500 font-bold">
+                  Total Site Visitors
+                </span>
+                <Eye className="h-4 w-4 text-neutral-400" />
+              </div>
+              <div>
+                <p className="font-sans text-2xl font-extrabold text-neutral-900 leading-none tracking-tight">
+                  {settings.visitCount || 0}
+                </p>
+                <p className="font-mono text-[8px] uppercase text-neutral-400 mt-1">
+                  Active Session Counter
+                </p>
+              </div>
+              <div className="absolute -bottom-1 -right-1 h-12 w-12 rounded-full bg-neutral-200/20 blur-md pointer-events-none" />
+            </div>
+
+            {/* Total Interaction Clicks Card */}
+            <div className="border border-neutral-200 bg-neutral-50/50 p-4 relative overflow-hidden flex flex-col justify-between h-24">
+              <div className="flex justify-between items-start">
+                <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-500 font-bold">
+                  Conversion Clicks
+                </span>
+                <MousePointerClick className="h-4 w-4 text-neutral-400" />
+              </div>
+              <div>
+                <p className="font-sans text-2xl font-extrabold text-neutral-900 leading-none tracking-tight">
+                  {settings.clickCount || 0}
+                </p>
+                <p className="font-mono text-[8px] uppercase text-neutral-400 mt-1">
+                  Bag, Detail & Order Clicks
+                </p>
+              </div>
+              <div className="absolute -bottom-1 -right-1 h-12 w-12 rounded-full bg-neutral-200/20 blur-md pointer-events-none" />
+            </div>
+          </div>
+
           {activeTab === 'products' && (
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
               
@@ -420,38 +461,21 @@ export default function AdminPanel({
                       />
                     </div>
 
-                    {/* Price & Category row */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block font-mono text-[10px] uppercase tracking-wider text-neutral-500 mb-1">
-                          Price ($ USD) *
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          required
-                          value={formPrice}
-                          onChange={(e) => setFormPrice(e.target.value)}
-                          placeholder="e.g. 79.99"
-                          className="w-full rounded-none border border-neutral-200 bg-white py-2 px-3 text-xs font-medium text-neutral-900 outline-none focus:border-black"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-mono text-[10px] uppercase tracking-wider text-neutral-500 mb-1">
-                          Category
-                        </label>
-                        <select
-                          value={formCategory}
-                          onChange={(e) => setFormCategory(e.target.value)}
-                          className="w-full rounded-none border border-neutral-200 bg-white py-2 px-3 text-xs font-medium text-neutral-900 outline-none focus:border-black"
-                        >
-                          {standardCategories.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                          <option value="Custom">Custom...</option>
-                        </select>
-                      </div>
+                    {/* Category Selection */}
+                    <div>
+                      <label className="block font-mono text-[10px] uppercase tracking-wider text-neutral-500 mb-1">
+                        Category
+                      </label>
+                      <select
+                        value={formCategory}
+                        onChange={(e) => setFormCategory(e.target.value)}
+                        className="w-full rounded-none border border-neutral-200 bg-white py-2 px-3 text-xs font-medium text-neutral-900 outline-none focus:border-black"
+                      >
+                        {standardCategories.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                        <option value="Custom">Custom...</option>
+                      </select>
                     </div>
 
                     {/* Custom category (conditional) */}
@@ -609,8 +633,6 @@ export default function AdminPanel({
                           <div>
                             <p className="font-display text-xs font-bold text-neutral-950 uppercase">{p.name}</p>
                             <div className="flex items-center gap-2 mt-0.5 font-mono text-[9px] text-neutral-500">
-                              <span>${p.price.toFixed(2)}</span>
-                              <span>•</span>
                               <span>{p.category}</span>
                               <span>•</span>
                               <span className={p.status === 'available' ? 'text-green-600' : 'text-rose-500'}>
@@ -742,7 +764,6 @@ export default function AdminPanel({
                   <div className="bg-white border border-neutral-200 p-2.5 font-mono text-[9px] text-neutral-500 space-y-1.5">
                     <span className="font-semibold uppercase tracking-wider block text-neutral-700">Supported Variables:</span>
                     <p>• <code className="text-black font-bold">{'{product_name}'}</code> : Inserts product name</p>
-                    <p>• <code className="text-black font-bold">{'{price}'}</code> : Inserts item price ($ USD)</p>
                     <p>• <code className="text-black font-bold">{'{id}'}</code> : Inserts product database identifier</p>
                   </div>
                 </div>

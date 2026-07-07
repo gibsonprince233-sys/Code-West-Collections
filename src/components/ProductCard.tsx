@@ -122,9 +122,6 @@ export default function ProductCard({
           >
             {product.name}
           </h3>
-          <span className="font-sans text-sm font-semibold text-neutral-900 whitespace-nowrap">
-            ${product.price.toFixed(2)}
-          </span>
         </div>
 
         {/* Short Description */}

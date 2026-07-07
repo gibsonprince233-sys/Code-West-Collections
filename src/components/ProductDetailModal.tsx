@@ -128,14 +128,9 @@ export default function ProductDetailModal({
               </div>
 
               {/* Name */}
-              <h2 className="font-serif text-3xl font-medium text-neutral-900 tracking-tight mb-2 leading-tight">
+              <h2 className="font-serif text-3xl font-medium text-neutral-900 tracking-tight mb-6 leading-tight">
                 {product.name}
               </h2>
-
-              {/* Price tag */}
-              <div className="font-sans text-2xl font-semibold text-neutral-900 mb-6">
-                ${product.price.toFixed(2)}
-              </div>
 
               {/* Core description */}
               <div className="space-y-3">

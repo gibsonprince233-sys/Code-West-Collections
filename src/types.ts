@@ -16,6 +16,8 @@ export interface StoreSettings {
   whatsappTemplate: string; // e.g., "Hello, I am interested in ordering {product_name} ({price})"
   instagramUrl?: string;
   tiktokUrl?: string;
+  visitCount?: number;
+  clickCount?: number;
 }
 
 export interface CartItem {

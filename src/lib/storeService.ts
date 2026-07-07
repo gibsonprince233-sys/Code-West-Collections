@@ -8,7 +8,8 @@ import {
   getDoc, 
   setDoc, 
   query, 
-  orderBy 
+  orderBy,
+  increment
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Product, StoreSettings, ContactMessage } from '../types';
@@ -119,6 +120,30 @@ export async function updateStoreSettings(settings: Partial<StoreSettings>): Pro
   await setDoc(docRef, cleanData(settings), { merge: true });
 }
 
+export async function incrementVisitCount(): Promise<number> {
+  try {
+    const docRef = doc(db, "settings", "global");
+    await setDoc(docRef, { visitCount: increment(1) }, { merge: true });
+    const docSnap = await getDoc(docRef);
+    return docSnap.data()?.visitCount || 0;
+  } catch (error) {
+    console.error("Error incrementing visit count:", error);
+    return 0;
+  }
+}
+
+export async function incrementClickCount(): Promise<number> {
+  try {
+    const docRef = doc(db, "settings", "global");
+    await setDoc(docRef, { clickCount: increment(1) }, { merge: true });
+    const docSnap = await getDoc(docRef);
+    return docSnap.data()?.clickCount || 0;
+  } catch (error) {
+    console.error("Error incrementing click count:", error);
+    return 0;
+  }
+}
+
 // --- PRODUCT OPERATIONS ---
 export async function getProducts(): Promise<Product[]> {
   try {
@@ -155,25 +180,34 @@ export async function getProducts(): Promise<Product[]> {
     }
     
     const products: Product[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      products.push({
-        id: doc.id,
-        name: data.name || '',
-        price: Number(data.price) || 0,
-        description: data.description || '',
-        imageUrl: data.imageUrl || '',
-        category: data.category || 'General',
-        orderLink: data.orderLink || '',
-        status: data.status || 'available',
-        createdAt: data.createdAt || Date.now()
-      });
-    });
+    const defaultNames = DEFAULT_PRODUCTS.map(dp => dp.name);
+
+    for (const docSnap of querySnapshot.docs) {
+      const data = docSnap.data();
+      const name = data.name || '';
+      if (defaultNames.includes(name)) {
+        // Permanently clean up/delete the default mock product from Firestore database
+        const docRef = doc(db, "products", docSnap.id);
+        deleteDoc(docRef).catch(err => console.error("Error cleaning up old product:", err));
+      } else {
+        products.push({
+          id: docSnap.id,
+          name: name,
+          price: Number(data.price) || 0,
+          description: data.description || '',
+          imageUrl: data.imageUrl || '',
+          category: data.category || 'General',
+          orderLink: data.orderLink || '',
+          status: data.status || 'available',
+          createdAt: data.createdAt || Date.now()
+        });
+      }
+    }
     return products;
   } catch (error) {
     console.error("Error fetching products:", error);
-    // Return standard mock/defaults on complete failure (e.g. initial connection latency)
-    return DEFAULT_PRODUCTS.map((p, i) => ({ id: `offline-${i}`, ...p }));
+    // Return empty array on complete failure to keep only the user's custom uploaded product visible
+    return [];
   }
 }
 

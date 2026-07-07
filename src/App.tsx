@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  getProducts, getStoreSettings, buildOrderUrl, deleteProduct 
+  getProducts, getStoreSettings, buildOrderUrl, deleteProduct, incrementVisitCount, incrementClickCount
 } from './lib/storeService';
 import { Product, StoreSettings, CartItem } from './types';
 import Navbar from './components/Navbar';
@@ -83,7 +83,29 @@ export default function App() {
         console.error("Failed to restore shopping bag:", e);
       }
     }
+
+    // Record session website visit (prevents counting duplicate refreshes in the same tab)
+    const alreadyVisited = sessionStorage.getItem('cw_website_visited');
+    if (!alreadyVisited) {
+      incrementVisitCount().then((newCount) => {
+        sessionStorage.setItem('cw_website_visited', 'true');
+        if (newCount > 0) {
+          setSettings(prev => ({ ...prev, visitCount: newCount }));
+        }
+      }).catch(err => console.error("Visit count tracking failed:", err));
+    }
   }, []);
+
+  const handleTrackClick = async () => {
+    try {
+      const newCount = await incrementClickCount();
+      if (newCount > 0) {
+        setSettings(prev => ({ ...prev, clickCount: newCount }));
+      }
+    } catch (err) {
+      console.error("Click tracking failed:", err);
+    }
+  };
 
   // Synchronize selected product with the URL query parameters
   useEffect(() => {
@@ -126,6 +148,7 @@ export default function App() {
   };
 
   const handleAddToBag = (product: Product) => {
+    handleTrackClick();
     const existingItem = cart.find(item => item.product.id === product.id);
     let newCart: CartItem[] = [];
     if (existingItem) {
@@ -221,6 +244,7 @@ export default function App() {
 
   // Order routing execution (compatible with web iframes)
   const handleOrder = (product: Product) => {
+    handleTrackClick();
     const orderUrl = buildOrderUrl(product, settings);
     // Create temporary physical <a> tag to bypass popup blockers and work perfectly in sandbox/iframe
     const a = document.createElement('a');
@@ -322,16 +346,9 @@ export default function App() {
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="font-mono text-xs text-neutral-400 uppercase">Sort order:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="rounded-none border border-neutral-200 bg-white py-1.5 px-3 font-mono text-xs uppercase text-neutral-800 outline-none focus:border-black"
-                >
-                  <option value="newest">Latest Releases</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                </select>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500 bg-neutral-100 border border-neutral-200/60 px-3 py-1.5 font-semibold">
+                  Latest Releases
+                </span>
               </div>
             </div>
 
@@ -364,8 +381,63 @@ export default function App() {
                   Reset Search Parameters
                 </button>
               </div>
+            ) : selectedCategory === 'All' ? (
+              /* Grouped by Category for "All" drops */
+              <div className="space-y-16">
+                {availableCategories.filter(cat => cat !== 'All').map((cat) => {
+                  const catProducts = sortedProducts.filter(p => p.category === cat);
+                  if (catProducts.length === 0) return null;
+                  return (
+                    <div key={cat} className="space-y-6">
+                      <div className="border-b border-neutral-200 pb-3 flex items-center justify-between">
+                        <h3 className="font-serif text-lg font-bold uppercase tracking-wider text-neutral-800">
+                          {cat}
+                        </h3>
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-neutral-400 font-semibold">
+                          {catProducts.length} Items
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
+                        {catProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            isAdmin={isAdmin}
+                            isLinked={product.id === linkedProductId}
+                            onEdit={() => {
+                              setIsAdminPanelOpen(true);
+                            }}
+                            onDelete={(id) => {
+                              setConfirmModal({
+                                isOpen: true,
+                                title: "Confirm Product Deletion",
+                                message: "Are you absolutely sure you want to delete this product? This action cannot be undone and will permanently remove it from the catalog.",
+                                onConfirm: async () => {
+                                  try {
+                                    await deleteProduct(id);
+                                    await fetchStoreData();
+                                    alert("Product deleted!");
+                                  } catch (err) {
+                                    console.error("Delete failed:", err);
+                                    alert("Failed to delete product. Please check your network or Firebase rules.");
+                                  }
+                                }
+                              });
+                            }}
+                            onAddToBag={handleAddToBag}
+                            onViewDetails={(p) => {
+                              handleTrackClick();
+                              setSelectedProduct(p);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
-              /* Product Cards Render Grid */
+              /* Product Cards Render Grid for Single Selected Category */
               <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-8">
                 {sortedProducts.map((product) => (
                   <ProductCard
@@ -375,7 +447,6 @@ export default function App() {
                     isLinked={product.id === linkedProductId}
                     onEdit={() => {
                       setIsAdminPanelOpen(true);
-                      // Load directly into editing form
                     }}
                     onDelete={(id) => {
                       setConfirmModal({
@@ -395,7 +466,10 @@ export default function App() {
                       });
                     }}
                     onAddToBag={handleAddToBag}
-                    onViewDetails={setSelectedProduct}
+                    onViewDetails={(p) => {
+                      handleTrackClick();
+                      setSelectedProduct(p);
+                    }}
                   />
                 ))}
               </div>
