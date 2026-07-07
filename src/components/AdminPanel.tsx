@@ -7,7 +7,8 @@ import {
 import { Product, StoreSettings, ContactMessage } from '../types';
 import { 
   addProduct, updateProduct, deleteProduct, updateStoreSettings,
-  getContactMessages, updateContactMessageStatus, deleteContactMessage
+  getContactMessages, updateContactMessageStatus, deleteContactMessage,
+  resetAnalyticsCounters
 } from '../lib/storeService';
 import ConfirmModal from './ConfirmModal';
 
@@ -62,8 +63,39 @@ export default function AdminPanel({
     isOpen: boolean;
     title: string;
     message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDestructive?: boolean;
     onConfirm: () => void | Promise<void>;
   } | null>(null);
+
+  // Handle Reset Analytics
+  const handleResetAnalytics = async () => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Reset Analytics Counters",
+      message: "Are you sure you want to clear all website visit and interaction click analytics? This will reset both counters back to zero permanently.",
+      confirmText: "Yes, Reset Counters",
+      cancelText: "No, Keep Counters",
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          await resetAnalyticsCounters();
+          onUpdateSettings({
+            ...settings,
+            visitCount: 0,
+            clickCount: 0
+          });
+          onRefresh();
+          setConfirmModal(null);
+          alert("Analytics counters have been reset successfully.");
+        } catch (err) {
+          console.error(err);
+          alert("Failed to reset analytics counters.");
+        }
+      }
+    });
+  };
 
   const fetchMessages = async () => {
     setIsLoadingMessages(true);
@@ -313,6 +345,7 @@ export default function AdminPanel({
 
       {/* Slide-over Content Container */}
       <div 
+        id="admin-panel"
         className="relative flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl z-10 border-l border-neutral-200"
       >
         
@@ -385,43 +418,70 @@ export default function AdminPanel({
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
           {/* Real-time Website KPI Metrics */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Website Visits Card */}
-            <div className="border border-neutral-200 bg-neutral-50/50 p-4 relative overflow-hidden flex flex-col justify-between h-24">
-              <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-500 font-bold">
-                  Total Site Visitors
-                </span>
-                <Eye className="h-4 w-4 text-neutral-400" />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-400 font-bold">
+                Live Store Traffic & Interaction Analytics
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    onRefresh();
+                  }}
+                  className="flex items-center gap-1.5 px-2 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 transition-colors rounded-xs font-mono text-[9px] uppercase tracking-wider border border-neutral-200 cursor-pointer"
+                  title="Force refresh database counters"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Sync Metrics</span>
+                </button>
+                <button
+                  onClick={handleResetAnalytics}
+                  className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors rounded-xs font-mono text-[9px] uppercase tracking-wider border border-rose-200 cursor-pointer"
+                  title="Reset all store interaction analytics back to 0"
+                >
+                  Clear Analytics
+                </button>
               </div>
-              <div>
-                <p className="font-sans text-2xl font-extrabold text-neutral-900 leading-none tracking-tight">
-                  {settings.visitCount || 0}
-                </p>
-                <p className="font-mono text-[8px] uppercase text-neutral-400 mt-1">
-                  Active Session Counter
-                </p>
-              </div>
-              <div className="absolute -bottom-1 -right-1 h-12 w-12 rounded-full bg-neutral-200/20 blur-md pointer-events-none" />
             </div>
 
-            {/* Total Interaction Clicks Card */}
-            <div className="border border-neutral-200 bg-neutral-50/50 p-4 relative overflow-hidden flex flex-col justify-between h-24">
-              <div className="flex justify-between items-start">
-                <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-500 font-bold">
-                  Conversion Clicks
-                </span>
-                <MousePointerClick className="h-4 w-4 text-neutral-400" />
+            <div className="grid grid-cols-2 gap-4">
+              {/* Website Visits Card */}
+              <div className="border border-neutral-200 bg-neutral-50/50 p-4 relative overflow-hidden flex flex-col justify-between h-24">
+                <div className="flex justify-between items-start">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-500 font-bold">
+                    Total Site Visitors
+                  </span>
+                  <Eye className="h-4 w-4 text-neutral-500" />
+                </div>
+                <div>
+                  <p className="font-sans text-2xl font-extrabold text-neutral-900 leading-none tracking-tight">
+                    {settings.visitCount || 0}
+                  </p>
+                  <p className="font-mono text-[8px] uppercase text-neutral-400 mt-1">
+                    Accurate Visit Counter
+                  </p>
+                </div>
+                <div className="absolute -bottom-1 -right-1 h-12 w-12 rounded-full bg-neutral-200/20 blur-md pointer-events-none" />
               </div>
-              <div>
-                <p className="font-sans text-2xl font-extrabold text-neutral-900 leading-none tracking-tight">
-                  {settings.clickCount || 0}
-                </p>
-                <p className="font-mono text-[8px] uppercase text-neutral-400 mt-1">
-                  Bag, Detail & Order Clicks
-                </p>
+
+              {/* Total Interaction Clicks Card */}
+              <div className="border border-neutral-200 bg-neutral-50/50 p-4 relative overflow-hidden flex flex-col justify-between h-24">
+                <div className="flex justify-between items-start">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-500 font-bold">
+                    Conversion Clicks
+                  </span>
+                  <MousePointerClick className="h-4 w-4 text-neutral-500" />
+                </div>
+                <div>
+                  <p className="font-sans text-2xl font-extrabold text-neutral-900 leading-none tracking-tight">
+                    {settings.clickCount || 0}
+                  </p>
+                  <p className="font-mono text-[8px] uppercase text-neutral-400 mt-1">
+                    Bag, Detail & Social Clicks
+                  </p>
+                </div>
+                <div className="absolute -bottom-1 -right-1 h-12 w-12 rounded-full bg-neutral-200/20 blur-md pointer-events-none" />
               </div>
-              <div className="absolute -bottom-1 -right-1 h-12 w-12 rounded-full bg-neutral-200/20 blur-md pointer-events-none" />
             </div>
           </div>
 
@@ -1001,9 +1061,9 @@ export default function AdminPanel({
           isOpen={confirmModal.isOpen}
           title={confirmModal.title}
           message={confirmModal.message}
-          confirmText="Yes, Delete Permanently"
-          cancelText="Cancel"
-          isDestructive={true}
+          confirmText={confirmModal.confirmText || "Yes, Delete Permanently"}
+          cancelText={confirmModal.cancelText || "Cancel"}
+          isDestructive={confirmModal.isDestructive !== undefined ? confirmModal.isDestructive : true}
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(null)}
         />

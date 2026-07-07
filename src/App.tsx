@@ -84,16 +84,12 @@ export default function App() {
       }
     }
 
-    // Record session website visit (prevents counting duplicate refreshes in the same tab)
-    const alreadyVisited = sessionStorage.getItem('cw_website_visited');
-    if (!alreadyVisited) {
-      incrementVisitCount().then((newCount) => {
-        sessionStorage.setItem('cw_website_visited', 'true');
-        if (newCount > 0) {
-          setSettings(prev => ({ ...prev, visitCount: newCount }));
-        }
-      }).catch(err => console.error("Visit count tracking failed:", err));
-    }
+    // Record website visit on every clean page load/mount to ensure absolute accuracy
+    incrementVisitCount().then((newCount) => {
+      if (newCount > 0) {
+        setSettings(prev => ({ ...prev, visitCount: newCount }));
+      }
+    }).catch(err => console.error("Visit count tracking failed:", err));
   }, []);
 
   const handleTrackClick = async () => {
@@ -106,6 +102,40 @@ export default function App() {
       console.error("Click tracking failed:", err);
     }
   };
+
+  // Global accurate click tracker (excludes administrative panel clicks to avoid polluting metrics)
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target) return;
+
+      // Exclude clicks inside the admin panel drawer or admin buttons
+      if (target.closest('#admin-panel') || target.closest('.admin-exclusive')) {
+        return;
+      }
+
+      // Detect if click was on a button, link, image card, input field, list selector, or anything designed to be interactive
+      const isClickable = 
+        target.tagName === 'BUTTON' || 
+        target.tagName === 'A' || 
+        target.tagName === 'INPUT' || 
+        target.tagName === 'SELECT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.closest('button') || 
+        target.closest('a') ||
+        target.closest('[role="button"]') ||
+        window.getComputedStyle(target).cursor === 'pointer';
+
+      if (isClickable) {
+        handleTrackClick();
+      }
+    };
+
+    document.addEventListener('click', handleGlobalClick);
+    return () => {
+      document.removeEventListener('click', handleGlobalClick);
+    };
+  }, []);
 
   // Synchronize selected product with the URL query parameters
   useEffect(() => {

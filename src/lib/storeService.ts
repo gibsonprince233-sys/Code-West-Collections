@@ -144,6 +144,16 @@ export async function incrementClickCount(): Promise<number> {
   }
 }
 
+export async function resetAnalyticsCounters(): Promise<void> {
+  try {
+    const docRef = doc(db, "settings", "global");
+    await setDoc(docRef, { visitCount: 0, clickCount: 0 }, { merge: true });
+  } catch (error) {
+    console.error("Error resetting analytics counters:", error);
+    throw error;
+  }
+}
+
 // --- PRODUCT OPERATIONS ---
 export async function getProducts(): Promise<Product[]> {
   try {
